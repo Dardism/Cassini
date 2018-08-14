@@ -27,7 +27,8 @@ class ImageViewController: UIViewController, UIScrollViewDelegate {
         set {
             imageView.image = newValue
             imageView.sizeToFit() //everytime image changes, we reset the scrollview size
-            scrollView.contentSize = imageView.frame.size
+            scrollView?.contentSize = imageView.frame.size
+            spinner?.stopAnimating()
         }
     }
     
@@ -38,6 +39,8 @@ class ImageViewController: UIViewController, UIScrollViewDelegate {
             fetchImage()
         }
     }
+    
+    @IBOutlet weak var spinner: UIActivityIndicatorView!
     
     @IBOutlet weak var scrollView: UIScrollView! {
         didSet {
@@ -54,11 +57,17 @@ class ImageViewController: UIViewController, UIScrollViewDelegate {
     
     var imageView = UIImageView()
     
+    //important to understand timing of things, multithreading, making sure url is correct, and keeping the main queue clear
     private func fetchImage() {
         if let url = imageURL {
-            let urlContents = try? Data(contentsOf: url) //return nil if fails
-            if let imageData = urlContents {
-                image = UIImage(data: imageData)
+            spinner.startAnimating()
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                let urlContents = try? Data(contentsOf: url) //return nil if fails
+                DispatchQueue.main.async {
+                    if let imageData = urlContents, url == self?.imageURL {
+                        self?.image = UIImage(data: imageData)
+                    }
+                }
             }
         }
     }
